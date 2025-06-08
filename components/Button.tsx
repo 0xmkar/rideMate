@@ -1,4 +1,6 @@
-import React from 'react';
+// components/Button.tsx - Ultra-Modern Button Component with 2025 Features
+
+import React, { useRef, useEffect } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -8,20 +10,29 @@ import {
   StyleProp,
   ViewStyle,
   TextStyle,
+  Animated,
+  Vibration,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography, shadows } from '../constants/colors';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'gradient' | 'glassmorphism' | 'neumorphism';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  gradient?: string[];
+  hapticFeedback?: boolean;
+  animationType?: 'scale' | 'bounce' | 'pulse' | 'glow';
+  shadowIntensity?: 'none' | 'low' | 'medium' | 'high';
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -35,48 +46,156 @@ const Button: React.FC<ButtonProps> = ({
   icon,
   iconPosition = 'left',
   style,
+  textStyle,
+  gradient = [colors.primary, colors.primaryLight],
+  hapticFeedback = true,
+  animationType = 'scale',
+  shadowIntensity = 'medium',
 }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (animationType === 'pulse' && !disabled) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+
+    if (animationType === 'glow' && !disabled) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [animationType, disabled]);
+
+  const handlePressIn = () => {
+    if (disabled || loading) return;
+
+    if (hapticFeedback) {
+      Vibration.vibrate(10);
+    }
+
+    switch (animationType) {
+      case 'scale':
+      case 'bounce':
+        Animated.spring(scaleAnim, {
+          toValue: 0.95,
+          useNativeDriver: true,
+          tension: 300,
+          friction: 10,
+        }).start();
+        break;
+    }
+  };
+
+  const handlePressOut = () => {
+    if (disabled || loading) return;
+
+    switch (animationType) {
+      case 'scale':
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 300,
+          friction: 10,
+        }).start();
+        break;
+      case 'bounce':
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 200,
+          friction: 3,
+        }).start();
+        break;
+    }
+  };
+
+  const handlePress = () => {
+    if (disabled || loading) return;
+    onPress();
+  };
+
   const getButtonStyle = (): StyleProp<ViewStyle>[] => {
-    const baseStyle: StyleProp<ViewStyle>[] = [styles.button, styles[size]];
+    const baseStyle: StyleProp<ViewStyle>[] = [
+      styles.button,
+      styles[size],
+      getShadowStyle(),
+    ];
+    
     if (fullWidth) baseStyle.push(styles.fullWidth);
     if (disabled || loading) baseStyle.push(styles.disabled);
 
-    switch (variant) {
-      case 'primary':
-        return [...baseStyle, styles.primary, !disabled && shadows.sm];
-      case 'secondary':
-        return [...baseStyle, styles.secondary, !disabled && shadows.sm];
-      case 'outline':
-        return [...baseStyle, styles.outline];
-      case 'ghost':
-        return [...baseStyle, styles.ghost];
-      case 'danger':
-        return [...baseStyle, styles.danger, !disabled && shadows.sm];
-      default:
-        return [...baseStyle, styles.primary, !disabled && shadows.sm];
+    // Don't add variant styles for gradient and glassmorphism as they use custom rendering
+    if (variant !== 'gradient' && variant !== 'glassmorphism') {
+      baseStyle.push(styles[variant]);
     }
+
+    return baseStyle;
   };
 
-  const sizeTextStyleMap: Record<'sm' | 'md' | 'lg', TextStyle> = {
-    sm: styles.textSm,
-    md: styles.textMd,
-    lg: styles.textLg,
+  const getShadowStyle = () => {
+    if (disabled || shadowIntensity === 'none') return {};
+    
+    switch (shadowIntensity) {
+      case 'low': return shadows.sm;
+      case 'medium': return shadows.md;
+      case 'high': return shadows.lg;
+      default: return shadows.md;
+    }
   };
 
   const getTextStyle = (): StyleProp<TextStyle>[] => {
-    const baseStyle: StyleProp<TextStyle>[] = [styles.text, sizeTextStyleMap[size]];
+    const sizeKey = `text${size.charAt(0).toUpperCase() + size.slice(1)}` as 'textXs' | 'textSm' | 'textMd' | 'textLg' | 'textXl';
+    const baseStyle: StyleProp<TextStyle>[] = [
+      styles.text,
+      styles[sizeKey],
+    ];
+
     switch (variant) {
       case 'primary':
       case 'danger':
-        return [...baseStyle, styles.textPrimary];
+      case 'gradient':
+        baseStyle.push(styles.textPrimary);
+        break;
       case 'secondary':
-        return [...baseStyle, styles.textSecondary];
+      case 'neumorphism':
+        baseStyle.push(styles.textSecondary);
+        break;
       case 'outline':
       case 'ghost':
-        return [...baseStyle, styles.textOutline];
-      default:
-        return [...baseStyle, styles.textPrimary];
+        baseStyle.push(styles.textOutline);
+        break;
+      case 'glassmorphism':
+        baseStyle.push(styles.textGlass);
+        break;
     }
+
+    return baseStyle;
   };
 
   const renderContent = () => {
@@ -96,24 +215,96 @@ const Button: React.FC<ButtonProps> = ({
       return (
         <View style={[styles.iconContainer, iconPosition === 'right' && styles.iconRight]}>
           {iconPosition === 'left' && <View style={styles.iconLeft}>{icon}</View>}
-          <Text style={getTextStyle()}>{title}</Text>
+          <Text style={[...getTextStyle(), textStyle]}>{title}</Text>
           {iconPosition === 'right' && <View style={styles.iconRightElement}>{icon}</View>}
         </View>
       );
     }
 
-    return <Text style={getTextStyle()}>{title}</Text>;
+    return <Text style={[...getTextStyle(), textStyle]}>{title}</Text>;
   };
 
+  const getAnimatedStyle = () => {
+    const animatedStyles: any = {};
+
+    switch (animationType) {
+      case 'scale':
+      case 'bounce':
+        animatedStyles.transform = [{ scale: scaleAnim }];
+        break;
+      case 'pulse':
+        animatedStyles.transform = [{ scale: pulseAnim }];
+        break;
+      case 'glow':
+        animatedStyles.shadowOpacity = glowAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.2, 0.8],
+        });
+        break;
+    }
+
+    return animatedStyles;
+  };
+
+  // Render gradient button
+  if (variant === 'gradient') {
+    return (
+      <Animated.View style={[getAnimatedStyle()]}>
+        <TouchableOpacity
+          style={[...getButtonStyle(), style]}
+          onPress={handlePress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={disabled || loading}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={gradient as unknown as readonly [string, string, ...string[]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientContainer}
+          >
+            {renderContent()}
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  // Render glassmorphism button
+  if (variant === 'glassmorphism') {
+    return (
+      <Animated.View style={[getAnimatedStyle()]}>
+        <TouchableOpacity
+          style={[...getButtonStyle(), styles.glassmorphism, style]}
+          onPress={handlePress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={disabled || loading}
+          activeOpacity={0.8}
+        >
+          <BlurView intensity={30} style={styles.blurContainer}>
+            {renderContent()}
+          </BlurView>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  // Render regular button
   return (
-    <TouchableOpacity
-      style={[...getButtonStyle(), style]}
-      onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
-    >
-      {renderContent()}
-    </TouchableOpacity>
+    <Animated.View style={[getAnimatedStyle()]}>
+      <TouchableOpacity
+        style={[...getButtonStyle(), style]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        activeOpacity={0.8}
+      >
+        {renderContent()}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -127,6 +318,11 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 
   // Sizes
+  xs: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    minHeight: 32,
+  } as ViewStyle,
   sm: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -142,6 +338,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     minHeight: 52,
   } as ViewStyle,
+  xl: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+    minHeight: 60,
+  } as ViewStyle,
 
   // Variants
   primary: {
@@ -152,7 +353,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.primary,
   } as ViewStyle,
   ghost: {
@@ -160,6 +361,39 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   danger: {
     backgroundColor: colors.error,
+  } as ViewStyle,
+  neumorphism: {
+    backgroundColor: colors.gray100,
+    shadowColor: colors.white,
+    shadowOffset: { width: -2, height: -2 },
+    shadowOpacity: 0.7,
+    shadowRadius: 3,
+    elevation: 0,
+  } as ViewStyle,
+  glassmorphism: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  } as ViewStyle,
+
+  // Special containers
+  gradientContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+  } as ViewStyle,
+
+  blurContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
   } as ViewStyle,
 
   // States
@@ -175,6 +409,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.semibold,
     textAlign: 'center',
   } as TextStyle,
+  textXs: {
+    fontSize: typography.fontSizes.xs,
+  } as TextStyle,
   textSm: {
     fontSize: typography.fontSizes.sm,
   } as TextStyle,
@@ -184,6 +421,9 @@ const styles = StyleSheet.create({
   textLg: {
     fontSize: typography.fontSizes.lg,
   } as TextStyle,
+  textXl: {
+    fontSize: typography.fontSizes.xl,
+  } as TextStyle,
   textPrimary: {
     color: colors.white,
   } as TextStyle,
@@ -192,6 +432,9 @@ const styles = StyleSheet.create({
   } as TextStyle,
   textOutline: {
     color: colors.primary,
+  } as TextStyle,
+  textGlass: {
+    color: colors.white,
   } as TextStyle,
 
   // Icon styles
