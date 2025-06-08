@@ -1,132 +1,430 @@
-"use client"
+// screens/Explore.tsx - Enhanced Explore Screen
 
-import { useState } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native"
-import { useNavigation, NavigationProp } from "@react-navigation/native"
-import SearchBar from "../components/SearchBar"
-import TripCard from "../components/TripCard"
-import { colors } from "../constants/colors"
-import { mockTrips } from "../constants/MockData"
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+  Image,
+} from 'react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import SearchBar from '../components/SearchBar';
+import TripCard from '../components/TripCard';
+import { colors, spacing, borderRadius, typography, shadows } from '../constants/colors';
+import { mockTrips } from '../constants/MockData';
 
-// Define the navigation parameters for your app
+const { width: screenWidth } = Dimensions.get('window');
+
 type RootStackParamList = {
-  TripDetails: {
-    tripId: string;
-  };
+  TripDetails: { tripId: string };
 };
 
-// Use the defined parameters in the navigation hook
-const Explore = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("1")
+const Explore: React.FC = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('1');
+  const [selectedFilter, setSelectedFilter] = useState('all');
 
   const handleSearch = () => {
-    console.log("Search pressed:", searchQuery)
-  }
+    console.log('Search pressed:', searchQuery);
+  };
 
   const handleTripPress = (tripId: string) => {
-    navigation.navigate("TripDetails", { tripId }) // Correctly typed navigation
-  }
+    navigation.navigate('TripDetails', { tripId });
+  };
 
   const handleCategoryPress = (categoryId: string) => {
-    setSelectedCategory(categoryId)
-  }
+    setSelectedCategory(categoryId);
+  };
 
-  // Filter trips based on selected category
-  const filteredTrips =
-    selectedCategory === "1"
-      ? mockTrips
-      : selectedCategory === "6"
-        ? mockTrips.filter((trip) => trip.femaleOnly)
-        : mockTrips
+  const handleFilterPress = (filter: string) => {
+    setSelectedFilter(filter);
+  };
+
+  // Filter trips based on selected category and filters
+  const filteredTrips = mockTrips.filter((trip) => {
+    let matchesCategory = true;
+    let matchesFilter = true;
+    
+    // Category filtering
+    if (selectedCategory === '6') {
+      matchesCategory = trip.femaleOnly;
+    } else if (selectedCategory !== '1') {
+      // Add more category logic here based on trip properties
+      matchesCategory = true;
+    }
+    
+    // Additional filtering
+    if (selectedFilter === 'budget') {
+      matchesFilter = parseInt(trip.budget.replace(/[^\d]/g, '')) <= 20000;
+    } else if (selectedFilter === 'duration') {
+      matchesFilter = parseInt(trip.duration.split(' ')[0]) <= 5;
+    }
+    
+    return matchesCategory && matchesFilter;
+  });
+
+  const categories = [
+    { id: '1', name: 'All', icon: '🌍', color: colors.primary },
+    { id: '2', name: 'Mountain', icon: '🏔️', color: colors.success },
+    { id: '3', name: 'Coastal', icon: '🏖️', color: colors.info },
+    { id: '4', name: 'Desert', icon: '🏜️', color: colors.warning },
+    { id: '5', name: 'City', icon: '🏙️', color: colors.secondary },
+    { id: '6', name: 'Women Only', icon: '👩', color: colors.accent },
+  ];
+
+  const filters = [
+    { id: 'all', name: 'All Trips', icon: '🔍' },
+    { id: 'budget', name: 'Budget Friendly', icon: '💰' },
+    { id: 'duration', name: 'Short Trips', icon: '⏱️' },
+    { id: 'popular', name: 'Popular', icon: '⭐' },
+  ];
+
+  const renderCategoryItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={[
+        styles.categoryItem,
+        { backgroundColor: selectedCategory === item.id ? item.color : colors.gray100 },
+      ]}
+      onPress={() => handleCategoryPress(item.id)}
+    >
+      <Text style={styles.categoryIcon}>{item.icon}</Text>
+      <Text
+        style={[
+          styles.categoryText,
+          { color: selectedCategory === item.id ? colors.white : colors.text },
+        ]}
+      >
+        {item.name}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderFilterItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={[
+        styles.filterItem,
+        selectedFilter === item.id && styles.filterItemSelected,
+      ]}
+      onPress={() => handleFilterPress(item.id)}
+    >
+      <Text style={styles.filterIcon}>{item.icon}</Text>
+      <Text
+        style={[
+          styles.filterText,
+          selectedFilter === item.id && styles.filterTextSelected,
+        ]}
+      >
+        {item.name}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Explore Trips</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Explore Adventures</Text>
+        <Text style={styles.subtitle}>Discover amazing motorcycle journeys</Text>
+      </View>
 
-      <SearchBar
-        placeHolder="Search for destinations..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        onPress={handleSearch}
-      />
-
-      <View style={styles.categoriesContainer}>
-        <FlatList
-          data={categories}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.categoryItem, selectedCategory === item.id && styles.selectedCategory]}
-              onPress={() => handleCategoryPress(item.id)}
-            >
-              <Text style={[styles.categoryText, selectedCategory === item.id && styles.selectedCategoryText]}>
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
-          horizontal
-          showsHorizontalScrollIndicator={false}
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          placeHolder="Search destinations, routes..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onPress={handleSearch}
+          showFilter={true}
         />
       </View>
 
-      <FlatList
-        data={filteredTrips}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TripCard trip={item} onPress={() => handleTripPress(item.id)} />}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
-    </View>
-  )
-}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Categories */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Categories</Text>
+          <FlatList
+            data={categories}
+            keyExtractor={(item) => item.id}
+            renderItem={renderCategoryItem}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}
+          />
+        </View>
 
-const categories = [
-  { id: "1", name: "All" },
-  { id: "2", name: "Mountain" },
-  { id: "3", name: "Coastal" },
-  { id: "4", name: "Desert" },
-  { id: "5", name: "City" },
-  { id: "6", name: "Female Only" },
-]
+        {/* Filters */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Filters</Text>
+          <FlatList
+            data={filters}
+            keyExtractor={(item) => item.id}
+            renderItem={renderFilterItem}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContainer}
+          />
+        </View>
+
+        {/* Stats Banner */}
+        <View style={[styles.statsBanner, shadows.sm]}>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsNumber}>{filteredTrips.length}</Text>
+            <Text style={styles.statsLabel}>Available Trips</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <Text style={styles.statsNumber}>24</Text>
+            <Text style={styles.statsLabel}>Active Riders</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsItem}>
+            <Text style={styles.statsNumber}>156</Text>
+            <Text style={styles.statsLabel}>Routes Mapped</Text>
+          </View>
+        </View>
+
+        {/* Featured Trips */}
+        {filteredTrips.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {selectedCategory === '1' ? 'Featured Trips' : categories.find(c => c.id === selectedCategory)?.name + ' Trips'}
+              </Text>
+              <Text style={styles.resultsCount}>
+                {filteredTrips.length} trip{filteredTrips.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+
+            <FlatList
+              data={filteredTrips}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TripCard trip={item} onPress={() => handleTripPress(item.id)} />
+              )}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
+
+        {/* Empty State */}
+        {filteredTrips.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>🔍</Text>
+            <Text style={styles.emptyStateTitle}>No trips found</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              Try adjusting your filters or search for something else
+            </Text>
+            <TouchableOpacity 
+              style={styles.resetButton}
+              onPress={() => {
+                setSelectedCategory('1');
+                setSelectedFilter('all');
+                setSearchQuery('');
+              }}
+            >
+              <Text style={styles.resetButtonText}>Reset Filters</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 16,
-    color: colors.text,
-  },
-  categoriesContainer: {
-    marginVertical: 16,
-  },
-  categoryItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.card,
-    marginRight: 8,
-  },
-  selectedCategory: {
+  
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingTop: 60,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.primary,
   },
+  
+  title: {
+    fontSize: typography.fontSizes.xxxl,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.white,
+    marginBottom: spacing.xs,
+  },
+  
+  subtitle: {
+    fontSize: typography.fontSizes.base,
+    color: colors.primaryLight,
+    opacity: 0.9,
+  },
+  
+  searchContainer: {
+    paddingHorizontal: spacing.md,
+    marginTop: -spacing.lg,
+    marginBottom: spacing.lg,
+    zIndex: 10,
+  },
+  
+  section: {
+    marginBottom: spacing.xl,
+  },
+  
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  
+  sectionTitle: {
+    fontSize: typography.fontSizes.xl,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.text,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  
+  resultsCount: {
+    fontSize: typography.fontSizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeights.medium,
+  },
+  
+  categoriesContainer: {
+    paddingHorizontal: spacing.md,
+  },
+  
+  categoryItem: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    marginRight: spacing.sm,
+    minWidth: 90,
+    ...shadows.sm,
+  },
+  
+  categoryIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  
   categoryText: {
-    fontSize: 14,
+    fontSize: typography.fontSizes.xs,
+    fontWeight: typography.fontWeights.semibold,
+    textAlign: 'center',
+  },
+  
+  filtersContainer: {
+    paddingHorizontal: spacing.md,
+  },
+  
+  filterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray100,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    marginRight: spacing.sm,
+  },
+  
+  filterItemSelected: {
+    backgroundColor: colors.primary,
+  },
+  
+  filterIcon: {
+    fontSize: 16,
+    marginRight: spacing.xs,
+  },
+  
+  filterText: {
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.medium,
     color: colors.text,
   },
-  selectedCategoryText: {
+  
+  filterTextSelected: {
     color: colors.white,
-    fontWeight: "500",
   },
-  listContent: {
-    paddingBottom: 20,
+  
+  statsBanner: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xl,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.lg,
   },
-})
+  
+  statsItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  
+  statsNumber: {
+    fontSize: typography.fontSizes.xxl,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  
+  statsLabel: {
+    fontSize: typography.fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  
+  statsDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+  },
+  
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  
+  emptyStateTitle: {
+    fontSize: typography.fontSizes.xl,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  
+  emptyStateSubtitle: {
+    fontSize: typography.fontSizes.base,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: typography.lineHeights.relaxed * typography.fontSizes.base,
+    marginBottom: spacing.lg,
+  },
+  
+  resetButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+  },
+  
+  resetButtonText: {
+    color: colors.white,
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.semibold,
+  },
+});
 
-export default Explore
+export default Explore;
