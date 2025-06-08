@@ -17,6 +17,11 @@
         "backgroundColor": "#ffffff"
       }
     },
+    "updates":{
+      "enabled": true,
+      "fallbackToCacheTimeout":0
+    },
+
     "web": {
       "bundler": "metro",
       "output": "static",

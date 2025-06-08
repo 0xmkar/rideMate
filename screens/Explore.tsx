@@ -1,6 +1,6 @@
-// screens/Explore.tsx - Enhanced Explore Screen
+// screens/Explore.tsx - Ultra-Modern Explore Screen with Enhanced UI
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,12 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  Animated,
+  StatusBar,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import SearchBar from '../components/SearchBar';
 import TripCard from '../components/TripCard';
 import { colors, spacing, borderRadius, typography, shadows } from '../constants/colors';
@@ -26,8 +30,35 @@ type RootStackParamList = {
 const Explore: React.FC = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('1');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [showMap, setShowMap] = useState(false);
+  
+  // Animation refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleSearch = () => {
     console.log('Search pressed:', searchQuery);
@@ -45,62 +76,90 @@ const Explore: React.FC = () => {
     setSelectedFilter(filter);
   };
 
+  // Enhanced mock data with more details
+  const enhancedTrips = mockTrips.map(trip => ({
+    ...trip,
+    difficulty: ['Easy', 'Medium', 'Hard', 'Expert'][Math.floor(Math.random() * 4)] as 'Easy' | 'Medium' | 'Hard' | 'Expert',
+    rating: 3.5 + Math.random() * 1.5,
+    reviews: Math.floor(Math.random() * 200) + 10,
+    joinedMembers: Math.floor(Math.random() * 8) + 2,
+    maxMembers: 10,
+  }));
+
   // Filter trips based on selected category and filters
-  const filteredTrips = mockTrips.filter((trip) => {
+  const filteredTrips = enhancedTrips.filter((trip) => {
     let matchesCategory = true;
     let matchesFilter = true;
     
     // Category filtering
-    if (selectedCategory === '6') {
+    if (selectedCategory === 'women') {
       matchesCategory = trip.femaleOnly;
-    } else if (selectedCategory !== '1') {
-      // Add more category logic here based on trip properties
-      matchesCategory = true;
+    } else if (selectedCategory === 'mountain') {
+      matchesCategory = trip.title.toLowerCase().includes('mountain') || trip.title.toLowerCase().includes('himalayan');
+    } else if (selectedCategory === 'coastal') {
+      matchesCategory = trip.title.toLowerCase().includes('coastal') || trip.title.toLowerCase().includes('gokarna');
+    } else if (selectedCategory === 'desert') {
+      matchesCategory = trip.title.toLowerCase().includes('desert') || trip.title.toLowerCase().includes('rajasthan');
     }
     
-    // Additional filtering
+    // Filter logic
     if (selectedFilter === 'budget') {
-      matchesFilter = parseInt(trip.budget.replace(/[^\d]/g, '')) <= 20000;
-    } else if (selectedFilter === 'duration') {
-      matchesFilter = parseInt(trip.duration.split(' ')[0]) <= 5;
+      matchesFilter = parseInt(trip.budget.replace(/[^\d]/g, '')) <= 15000;
+    } else if (selectedFilter === 'short') {
+      matchesFilter = parseInt(trip.duration.split(' ')[0]) <= 3;
+    } else if (selectedFilter === 'popular') {
+      matchesFilter = (trip.rating || 0) >= 4.0;
     }
     
     return matchesCategory && matchesFilter;
   });
 
   const categories = [
-    { id: '1', name: 'All', icon: '🌍', color: colors.primary },
-    { id: '2', name: 'Mountain', icon: '🏔️', color: colors.success },
-    { id: '3', name: 'Coastal', icon: '🏖️', color: colors.info },
-    { id: '4', name: 'Desert', icon: '🏜️', color: colors.warning },
-    { id: '5', name: 'City', icon: '🏙️', color: colors.secondary },
-    { id: '6', name: 'Women Only', icon: '👩', color: colors.accent },
+    { id: 'all', name: 'All', icon: '🌍', gradient: [colors.primary, colors.primaryLight] },
+    { id: 'mountain', name: 'Mountain', icon: '🏔️', gradient: [colors.success, colors.successLight] },
+    { id: 'coastal', name: 'Coastal', icon: '🏖️', gradient: [colors.info, colors.infoLight] },
+    { id: 'desert', name: 'Desert', icon: '🏜️', gradient: [colors.warning, colors.warningLight] },
+    { id: 'women', name: 'Women Only', icon: '👩', gradient: [colors.accent, colors.accentLight] },
   ];
 
   const filters = [
-    { id: 'all', name: 'All Trips', icon: '🔍' },
-    { id: 'budget', name: 'Budget Friendly', icon: '💰' },
-    { id: 'duration', name: 'Short Trips', icon: '⏱️' },
-    { id: 'popular', name: 'Popular', icon: '⭐' },
+    { id: 'all', name: 'All Trips', icon: '🔍', color: colors.primary },
+    { id: 'budget', name: 'Budget Friendly', icon: '💰', color: colors.success },
+    { id: 'short', name: 'Short Trips', icon: '⏱️', color: colors.warning },
+    { id: 'popular', name: 'Popular', icon: '⭐', color: colors.accent },
+  ];
+
+  const stats = [
+    { number: filteredTrips.length.toString(), label: 'Available Trips' },
+    { number: '24', label: 'Active Riders' },
+    { number: '156', label: 'Routes Mapped' },
   ];
 
   const renderCategoryItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[
         styles.categoryItem,
-        { backgroundColor: selectedCategory === item.id ? item.color : colors.gray100 },
+        selectedCategory === item.id && styles.categoryItemSelected,
       ]}
       onPress={() => handleCategoryPress(item.id)}
+      activeOpacity={0.8}
     >
-      <Text style={styles.categoryIcon}>{item.icon}</Text>
-      <Text
-        style={[
-          styles.categoryText,
-          { color: selectedCategory === item.id ? colors.white : colors.text },
-        ]}
-      >
-        {item.name}
-      </Text>
+      {selectedCategory === item.id ? (
+        <LinearGradient
+          colors={item.gradient as readonly [string, string]}
+          style={styles.categoryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={styles.categoryIcon}>{item.icon}</Text>
+          <Text style={styles.categoryTextSelected}>{item.name}</Text>
+        </LinearGradient>
+      ) : (
+        <BlurView intensity={20} style={styles.categoryBlur}>
+          <Text style={styles.categoryIcon}>{item.icon}</Text>
+          <Text style={styles.categoryText}>{item.name}</Text>
+        </BlurView>
+      )}
     </TouchableOpacity>
   );
 
@@ -111,41 +170,121 @@ const Explore: React.FC = () => {
         selectedFilter === item.id && styles.filterItemSelected,
       ]}
       onPress={() => handleFilterPress(item.id)}
+      activeOpacity={0.8}
     >
-      <Text style={styles.filterIcon}>{item.icon}</Text>
-      <Text
-        style={[
-          styles.filterText,
-          selectedFilter === item.id && styles.filterTextSelected,
-        ]}
+      <BlurView 
+        intensity={selectedFilter === item.id ? 40 : 20} 
+        style={styles.filterBlur}
       >
-        {item.name}
-      </Text>
+        <View style={[
+          styles.filterIconContainer,
+          selectedFilter === item.id && { backgroundColor: item.color + '20' }
+        ]}>
+          <Text style={styles.filterIcon}>{item.icon}</Text>
+        </View>
+        <Text style={[
+          styles.filterText,
+          selectedFilter === item.id && { color: item.color, fontWeight: typography.fontWeights.bold }
+        ]}>
+          {item.name}
+        </Text>
+      </BlurView>
     </TouchableOpacity>
+  );
+
+  const renderStatCard = ({ item, index }: { item: any; index: number }) => (
+    <Animated.View
+      style={[
+        styles.statCard,
+        {
+          transform: [{
+            translateY: slideAnim.interpolate({
+              inputRange: [0, 30],
+              outputRange: [0, 20 + (index * 5)],
+            })
+          }],
+          opacity: fadeAnim,
+        }
+      ]}
+    >
+      <BlurView intensity={30} style={styles.statCardBlur}>
+        <Text style={styles.statNumber}>{item.number}</Text>
+        <Text style={styles.statLabel}>{item.label}</Text>
+      </BlurView>
+    </Animated.View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Explore Adventures</Text>
-        <Text style={styles.subtitle}>Discover amazing motorcycle journeys</Text>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Enhanced Header with Gradient */}
+      <LinearGradient
+        colors={[colors.primary, colors.primaryLight, colors.accent] as readonly [string, string, string]}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View 
+          style={[
+            styles.headerContent,
+            {
+              opacity: headerAnim,
+              transform: [{
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0],
+                })
+              }]
+            }
+          ]}
+        >
+          {/* Header Title */}
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.title}>Explore Adventures</Text>
+              <Text style={styles.subtitle}>Discover amazing motorcycle journeys</Text>
+            </View>
+            
+            {/* Map Toggle */}
+            <TouchableOpacity 
+              style={styles.mapToggle}
+              onPress={() => setShowMap(!showMap)}
+            >
+              <BlurView intensity={30} style={styles.mapToggleBlur}>
+                <Text style={styles.mapToggleIcon}>{showMap ? '📋' : '🗺️'}</Text>
+              </BlurView>
+            </TouchableOpacity>
+          </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          placeHolder="Search destinations, routes..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onPress={handleSearch}
-          showFilter={true}
-        />
-      </View>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <SearchBar
+              placeHolder="Search destinations, routes..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onPress={handleSearch}
+              showFilter={true}
+            />
+          </View>
+        </Animated.View>
+      </LinearGradient>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Categories */}
-        <View style={styles.section}>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Categories Section */}
+        <Animated.View 
+          style={[
+            styles.section,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Categories</Text>
           <FlatList
             data={categories}
@@ -155,10 +294,18 @@ const Explore: React.FC = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
           />
-        </View>
+        </Animated.View>
 
-        {/* Filters */}
-        <View style={styles.section}>
+        {/* Filters Section */}
+        <Animated.View 
+          style={[
+            styles.section,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Filters</Text>
           <FlatList
             data={filters}
@@ -168,43 +315,99 @@ const Explore: React.FC = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filtersContainer}
           />
-        </View>
+        </Animated.View>
 
         {/* Stats Banner */}
-        <View style={[styles.statsBanner, shadows.sm]}>
-          <View style={styles.statsItem}>
-            <Text style={styles.statsNumber}>{filteredTrips.length}</Text>
-            <Text style={styles.statsLabel}>Available Trips</Text>
-          </View>
-          <View style={styles.statsDivider} />
-          <View style={styles.statsItem}>
-            <Text style={styles.statsNumber}>24</Text>
-            <Text style={styles.statsLabel}>Active Riders</Text>
-          </View>
-          <View style={styles.statsDivider} />
-          <View style={styles.statsItem}>
-            <Text style={styles.statsNumber}>156</Text>
-            <Text style={styles.statsLabel}>Routes Mapped</Text>
+        <View style={styles.section}>
+          <View style={styles.statsContainer}>
+            {stats.map((stat, index) => renderStatCard({ item: stat, index }))}
           </View>
         </View>
+
+        {/* Map View Toggle */}
+        {showMap && (
+          <Animated.View 
+            style={[
+              styles.mapSection,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: fadeAnim }]
+              }
+            ]}
+          >
+            <BlurView intensity={20} style={styles.mapContainer}>
+              <View style={styles.mapPlaceholder}>
+                <Text style={styles.mapIcon}>🗺️</Text>
+                <Text style={styles.mapTitle}>Interactive Map</Text>
+                <Text style={styles.mapSubtitle}>
+                  Showing {filteredTrips.length} trips in your area
+                </Text>
+                
+                {/* Mock map pins */}
+                <View style={styles.mapPins}>
+                  {filteredTrips.slice(0, 5).map((trip, index) => (
+                    <TouchableOpacity
+                      key={trip.id}
+                      style={[
+                        styles.mapPin,
+                        {
+                          left: 50 + (index * 40),
+                          top: 80 + (index % 2) * 30,
+                        }
+                      ]}
+                      onPress={() => handleTripPress(trip.id)}
+                    >
+                      <LinearGradient
+                        colors={[colors.primary, colors.primaryLight] as readonly [string, string]}
+                        style={styles.mapPinGradient}
+                      >
+                        <Text style={styles.mapPinText}>📍</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </BlurView>
+          </Animated.View>
+        )}
 
         {/* Featured Trips */}
         {filteredTrips.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
-                {selectedCategory === '1' ? 'Featured Trips' : categories.find(c => c.id === selectedCategory)?.name + ' Trips'}
+                {selectedCategory === 'all' ? 'Featured Trips' : 
+                 categories.find(c => c.id === selectedCategory)?.name + ' Adventures'}
               </Text>
-              <Text style={styles.resultsCount}>
-                {filteredTrips.length} trip{filteredTrips.length !== 1 ? 's' : ''}
-              </Text>
+              <TouchableOpacity style={styles.viewAllButton}>
+                <BlurView intensity={20} style={styles.viewAllBlur}>
+                  <Text style={styles.viewAllText}>{filteredTrips.length} trips</Text>
+                </BlurView>
+              </TouchableOpacity>
             </View>
 
             <FlatList
               data={filteredTrips}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TripCard trip={item} onPress={() => handleTripPress(item.id)} />
+              renderItem={({ item, index }) => (
+                <Animated.View
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{
+                      translateY: fadeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [50 + (index * 10), 0],
+                      })
+                    }]
+                  }}
+                >
+                  <TripCard 
+                    trip={item} 
+                    onPress={() => handleTripPress(item.id)}
+                    showJoinButton={true}
+                    onJoinPress={() => console.log('Join trip:', item.id)}
+                  />
+                </Animated.View>
               )}
               showsVerticalScrollIndicator={false}
               scrollEnabled={false}
@@ -214,24 +417,65 @@ const Explore: React.FC = () => {
 
         {/* Empty State */}
         {filteredTrips.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>🔍</Text>
-            <Text style={styles.emptyStateTitle}>No trips found</Text>
-            <Text style={styles.emptyStateSubtitle}>
-              Try adjusting your filters or search for something else
-            </Text>
-            <TouchableOpacity 
-              style={styles.resetButton}
-              onPress={() => {
-                setSelectedCategory('1');
-                setSelectedFilter('all');
-                setSearchQuery('');
-              }}
-            >
-              <Text style={styles.resetButtonText}>Reset Filters</Text>
+          <Animated.View 
+            style={[
+              styles.emptyState,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: fadeAnim }]
+              }
+            ]}
+          >
+            <BlurView intensity={20} style={styles.emptyStateBlur}>
+              <Text style={styles.emptyStateIcon}>🔍</Text>
+              <Text style={styles.emptyStateTitle}>No adventures found</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                Try adjusting your filters or search for something else
+              </Text>
+              <TouchableOpacity 
+                style={styles.resetButton}
+                onPress={() => {
+                  setSelectedCategory('all');
+                  setSelectedFilter('all');
+                  setSearchQuery('');
+                }}
+              >
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryLight] as readonly [string, string]}
+                  style={styles.resetButtonGradient}
+                >
+                  <Text style={styles.resetButtonText}>Reset Filters</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </BlurView>
+          </Animated.View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.quickAction}>
+              <LinearGradient
+                colors={[colors.success, colors.successLight] as readonly [string, string]}
+                style={styles.quickActionGradient}
+              >
+                <Text style={styles.quickActionIcon}>🎯</Text>
+                <Text style={styles.quickActionText}>Plan Trip</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.quickAction}>
+              <LinearGradient
+                colors={[colors.accent, colors.accentLight] as readonly [string, string]}
+                style={styles.quickActionGradient}
+              >
+                <Text style={styles.quickActionIcon}>👥</Text>
+                <Text style={styles.quickActionText}>Join Group</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
-        )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -244,10 +488,20 @@ const styles = StyleSheet.create({
   },
   
   header: {
-    paddingHorizontal: spacing.md,
     paddingTop: 60,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.primary,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  
+  headerContent: {
+    // Animation container
+  },
+  
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
   },
   
   title: {
@@ -259,15 +513,37 @@ const styles = StyleSheet.create({
   
   subtitle: {
     fontSize: typography.fontSizes.base,
-    color: colors.primaryLight,
-    opacity: 0.9,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  
+  mapToggle: {
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  
+  mapToggleBlur: {
+    padding: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  mapToggleIcon: {
+    fontSize: 20,
   },
   
   searchContainer: {
-    paddingHorizontal: spacing.md,
-    marginTop: -spacing.lg,
-    marginBottom: spacing.lg,
     zIndex: 10,
+  },
+  
+  content: {
+    flex: 1,
+    marginTop: -spacing.lg,
+  },
+  
+  contentContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   
   section: {
@@ -278,7 +554,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   
@@ -286,62 +561,109 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSizes.xl,
     fontWeight: typography.fontWeights.bold,
     color: colors.text,
-    paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   
-  resultsCount: {
+  viewAllButton: {
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+  },
+  
+  viewAllBlur: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+  },
+  
+  viewAllText: {
     fontSize: typography.fontSizes.sm,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeights.medium,
+    color: colors.primary,
+    fontWeight: typography.fontWeights.semibold,
   },
   
   categoriesContainer: {
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   
   categoryItem: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
-    minWidth: 90,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    minWidth: 100,
     ...shadows.sm,
   },
   
+  categoryItemSelected: {
+    ...shadows.md,
+  },
+  
+  categoryGradient: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  
+  categoryBlur: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  
   categoryIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 24,
+    marginBottom: spacing.sm,
   },
   
   categoryText: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: typography.fontWeights.semibold,
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.medium,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  
+  categoryTextSelected: {
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.white,
     textAlign: 'center',
   },
   
   filtersContainer: {
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   
   filterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
   },
   
   filterItemSelected: {
-    backgroundColor: colors.primary,
+    ...shadows.md,
+  },
+  
+  filterBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  
+  filterIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   
   filterIcon: {
     fontSize: 16,
-    marginRight: spacing.xs,
   },
   
   filterText: {
@@ -350,47 +672,113 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   
-  filterTextSelected: {
-    color: colors.white,
-  },
-  
-  statsBanner: {
+  statsContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.xl,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.lg,
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   
-  statsItem: {
+  statCard: {
     flex: 1,
-    alignItems: 'center',
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
   },
   
-  statsNumber: {
+  statCardBlur: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  
+  statNumber: {
     fontSize: typography.fontSizes.xxl,
-    fontWeight: typography.fontWeights.bold,
+    fontWeight: typography.fontWeights.black,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   
-  statsLabel: {
+  statLabel: {
     fontSize: typography.fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontWeight: typography.fontWeights.medium,
+  },
+  
+  mapSection: {
+    marginBottom: spacing.xl,
+  },
+  
+  mapContainer: {
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    ...shadows.lg,
+  },
+  
+  mapPlaceholder: {
+    height: 250,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  
+  mapIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  
+  mapTitle: {
+    fontSize: typography.fontSizes.xl,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  
+  mapSubtitle: {
+    fontSize: typography.fontSizes.base,
     color: colors.textSecondary,
     textAlign: 'center',
   },
   
-  statsDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
+  mapPins: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  
+  mapPin: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  
+  mapPinGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  mapPinText: {
+    fontSize: 16,
   },
   
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  
+  emptyStateBlur: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   
   emptyStateIcon: {
@@ -410,20 +798,52 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: typography.lineHeights.relaxed * typography.fontSizes.base,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   
   resetButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  
+  resetButtonGradient: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
   },
   
   resetButtonText: {
     color: colors.white,
-    fontSize: typography.fontSizes.sm,
+    fontSize: typography.fontSizes.base,
     fontWeight: typography.fontWeights.semibold,
+  },
+  
+  quickActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  
+  quickAction: {
+    flex: 1,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  
+  quickActionGradient: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  
+  quickActionIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  
+  quickActionText: {
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.white,
   },
 });
 
